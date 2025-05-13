@@ -11,8 +11,6 @@ import policies
 from ekf import ExtendedKalmanFilter
 from pf import ParticleFilter
 
-import uuid
-
 
 def localize_trial(env, policy, filt, x0, num_steps, plot=False):
     # Collect data from an entire rollout
@@ -150,13 +148,11 @@ if __name__ == '__main__':
     print('Data factor:', args.data_factor)
     print('Filter factor:', args.filter_factor)
 
-    trial = True
+    trial = False
 
     if trial:
-
         r_values = [1/64, 1/16, 1/4, 4, 16, 64]
-        num_trials = 10
-        num_steps = 200
+        num_trials = 3 # put 1 for question c
         alphas = np.array([0.05**2, 0.005**2, 0.1**2, 0.01**2])
         beta = np.diag([np.deg2rad(5)**2])
         initial_mean = np.array([180, 50, 0]).reshape((-1, 1))
@@ -176,19 +172,31 @@ if __name__ == '__main__':
             
             for trial in range(num_trials):
                 # Set random seed for reproducibility
-                np.random.seed(trial + int(uuid.uuid4().int % 1000000))
+                np.random.seed()
                 
                 # Initialize environment and filter
-                env = Field(r * alphas, r * beta)
-                filt = ExtendedKalmanFilter(
-                    initial_mean,
-                    initial_cov,
-                    r * alphas,
-                    r * beta
-                )
+                env = Field(r * alphas, r * beta) # put args.data_factor to go to default for question c
+                
+                if args.filter_type == 'none':
+                    filt = None
+                elif args.filter_type == 'ekf':
+                    filt = ExtendedKalmanFilter(
+                        initial_mean,
+                        initial_cov,
+                        r * alphas,
+                        r * beta
+                    )
+                elif args.filter_type == 'pf':
+                    filt = ParticleFilter(
+                        initial_mean,
+                        initial_cov,
+                        args.num_particles,
+                        r * alphas,
+                        r * beta
+                    )
                 
                 # Run localization
-                mpe, mme, anees = localize_trial(env, policy, filt, initial_mean, num_steps, plot=False)
+                mpe, mme, anees = localize_trial(env, policy, filt, initial_mean, args.num_steps, plot=False)
                 position_errors[trial] = mpe
                 mahalanobis_errors[trial] = mme
                 anees_values[trial] = anees
@@ -206,8 +214,8 @@ if __name__ == '__main__':
         plt.plot(r_values, median_position_errors, 'b-o')
         plt.xscale('log')
         plt.xlabel('r (Data and Filter Factor)')
-        plt.ylabel('Median Mean Position Error')
-        plt.title('Median Position Error vs r')
+        plt.ylabel('Mean Position Error')
+        plt.title('Position Error vs r')
         plt.grid(True)
 
         # Plot 2: Mean Mahalanobis Error
@@ -215,8 +223,8 @@ if __name__ == '__main__':
         plt.plot(r_values, median_mahalanobis_errors, 'r-o')
         plt.xscale('log')
         plt.xlabel('r (Data and Filter Factor)')
-        plt.ylabel('Median Mean Mahalanobis Error')
-        plt.title('Median Mahalanobis Error vs r')
+        plt.ylabel('Mean Mahalanobis Error')
+        plt.title('Mahalanobis Error vs r')
         plt.grid(True)
 
         # Plot 3: ANEES
@@ -224,8 +232,8 @@ if __name__ == '__main__':
         plt.plot(r_values, median_anees, 'g-o')
         plt.xscale('log')
         plt.xlabel('r (Data and Filter Factor)')
-        plt.ylabel('Median ANEES')
-        plt.title('Median ANEES vs r')
+        plt.ylabel('ANEES')
+        plt.title('ANEES vs r')
         plt.grid(True)
 
         plt.tight_layout()
