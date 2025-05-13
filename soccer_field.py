@@ -1,9 +1,9 @@
-""" Written by Rafay Aamir and Ghaith Chamaa for VIBOT M1: Probabilistic Robotics (Summer 2025)
-"""
+"""Written by Rafay Aamir and Ghaith Chamaa for VIBOT M1: Probabilistic Robotics (Summer 2025)"""
 
 import numpy as np
 import matplotlib.pyplot as plt
 from utils import minimized_angle
+
 
 class Field:
     NUM_MARKERS = 6
@@ -43,7 +43,6 @@ class Field:
         6: MARKER_OFFSET_Y + MARKER_DIST_Y,
     }
 
-
     def __init__(self, alphas, beta):
         self.alphas = alphas
         self.beta = beta
@@ -53,12 +52,13 @@ class Field:
         _, _, prev_theta = x.ravel()
         rot1, trans, _ = u.ravel()
 
-
-        G = np.array([
-            [1, 0, -trans * np.sin(prev_theta + rot1)],
-            [0, 1, trans * np.cos(prev_theta + rot1)],
-            [0, 0, 1]
-        ])
+        G = np.array(
+            [
+                [1, 0, -trans * np.sin(prev_theta + rot1)],
+                [0, 1, trans * np.cos(prev_theta + rot1)],
+                [0, 0, 1],
+            ]
+        )
         return G
 
     def V(self, x, u):
@@ -66,11 +66,13 @@ class Field:
         _, _, prev_theta = x.ravel()
         rot1, trans, _ = u.ravel()
 
-        V = np.array([
-            [-trans * np.sin(prev_theta + rot1), np.cos(prev_theta + rot1), 0],
-            [trans * np.cos(prev_theta + rot1), np.sin(prev_theta + rot1), 0],
-            [1, 0, 1]
-        ])
+        V = np.array(
+            [
+                [-trans * np.sin(prev_theta + rot1), np.cos(prev_theta + rot1), 0],
+                [trans * np.cos(prev_theta + rot1), np.sin(prev_theta + rot1), 0],
+                [1, 0, 1],
+            ]
+        )
         return V
 
     def H(self, x, marker_id):
@@ -83,9 +85,7 @@ class Field:
         dy = marker_y - prev_y
         q = dx**2 + dy**2
 
-        H = np.array([
-            [dy / q, -dx / q, -1]
-        ])
+        H = np.array([[dy / q, -dx / q, -1]])
         return H
 
     def forward(self, x, u):
@@ -119,9 +119,7 @@ class Field:
         """
         dx = self.MARKER_X_POS[marker_id] - x[0]
         dy = self.MARKER_Y_POS[marker_id] - x[1]
-        return np.array(
-            [minimized_angle(np.arctan2(dy, dx) - x[2])]
-        ).reshape((-1, 1))
+        return np.array([minimized_angle(np.arctan2(dy, dx) - x[2])]).reshape((-1, 1))
 
     def noise_from_motion(self, u, alphas):
         """Compute covariance matrix for noisy action.
@@ -130,9 +128,9 @@ class Field:
         alphas: noise parameters for odometry motion model
         """
         variances = np.zeros(3)
-        variances[0] = alphas[0] * u[0]**2 + alphas[1] * u[1]**2
-        variances[1] = alphas[2] * u[1]**2 + alphas[3] * (u[0]**2 + u[2]**2)
-        variances[2] = alphas[0] * u[2]**2 + alphas[1] * u[1]**2
+        variances[0] = alphas[0] * u[0] ** 2 + alphas[1] * u[1] ** 2
+        variances[1] = alphas[2] * u[1] ** 2 + alphas[3] * (u[0] ** 2 + u[2] ** 2)
+        variances[2] = alphas[0] * u[2] ** 2 + alphas[1] * u[1] ** 2
         return np.diag(variances)
 
     def likelihood(self, innovation, beta):
@@ -142,7 +140,7 @@ class Field:
         beta: noise parameters for landmark observation model (covariance matrix)
         """
         k = innovation.shape[0]
-        norm_factor = np.sqrt((2 * np.pi)**k * np.linalg.det(beta))
+        norm_factor = np.sqrt((2 * np.pi) ** k * np.linalg.det(beta))
         inv_beta = np.linalg.inv(beta)
 
         return np.exp(-0.5 * innovation.T.dot(inv_beta).dot(innovation)) / norm_factor
@@ -156,11 +154,13 @@ class Field:
         if alphas is None:
             alphas = self.alphas
 
-        cov_u = np.diag([
-            alphas[0] * u[0,0]**2 + alphas[1] * u[1,0]**2,
-            alphas[2] * u[1,0]**2 + alphas[3] * (u[0,0]**2 + u[2,0]**2),
-            alphas[0] * u[2,0]**2 + alphas[1] * u[1,0]**2
-        ])
+        cov_u = np.diag(
+            [
+                alphas[0] * u[0, 0] ** 2 + alphas[1] * u[1, 0] ** 2,
+                alphas[2] * u[1, 0] ** 2 + alphas[3] * (u[0, 0] ** 2 + u[2, 0] ** 2),
+                alphas[0] * u[2, 0] ** 2 + alphas[1] * u[1, 0] ** 2,
+            ]
+        )
 
         noisy_u = u + np.random.multivariate_normal([0, 0, 0], cov_u).reshape((-1, 1))
 
@@ -178,7 +178,7 @@ class Field:
             beta = self.beta
 
         z = self.observe(x, marker_id)
-        noisy_z = z + np.random.normal(0, np.sqrt(beta[0,0]), size=(1, 1))
+        noisy_z = z + np.random.normal(0, np.sqrt(beta[0, 0]), size=(1, 1))
 
         return noisy_z
 
@@ -217,7 +217,9 @@ class Field:
         states_real = np.concatenate([x0.T, states_real], axis=0)
 
         return (
-            states_noisefree, states_real,
+            states_noisefree,
+            states_real,
             action_noisefree,
-            obs_noisefree, obs_real
+            obs_noisefree,
+            obs_real,
         )
